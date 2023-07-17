@@ -1,7 +1,7 @@
 IME制御用 関数群 (IMEv2.ahk)  
 AutoHotkey v2.0 上で日本語入力の制御を可能にするための関数群、IMM32 API使用  
-
-内容
+  
+内容  
 説明書　README.txt  
 ソース　IMEv2.ahk  
 テストコード　testIMEv2.ahk  
