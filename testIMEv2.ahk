@@ -1,7 +1,7 @@
 ﻿#Requires AutoHotkey v2.0
 
 
-MsgBox "This script will run only on v2.0, keyboard language is " . Get_languege_name()
+MsgBox("This script will run only on v2.0, keyboard language is " . Get_languege_name())
 	SetTimer(Interrupt16,16)
 return
 
@@ -34,6 +34,7 @@ F2::
 	else
 	if vImeConvMode == 3
 		IME_SetConvMode(8)
+	else
 	if vImeConvMode == 8
 		IME_SetConvMode(9)
 		

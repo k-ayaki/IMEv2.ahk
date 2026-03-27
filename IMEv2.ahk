@@ -77,18 +77,18 @@
 IME_GET(WinTitle:="A")  {
     hwnd := WinExist(WinTitle)
     if  (WinActive(WinTitle))   {
-        ptrSize := !A_PtrSize ? 4 : A_PtrSize
+        ptrSize := A_PtrSize
         cbSize := 4+4+(PtrSize*6)+16
         stGTI := Buffer(cbSize,0)
-        NumPut("DWORD", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Uint", stGTI.Ptr)
+        NumPut("UInt", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
+        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr", stGTI.Ptr,"Int")
                  ? NumGet(stGTI.Ptr,8+PtrSize,"Uint") : hwnd
     }
     return DllCall("SendMessage"
-          , "UInt", DllCall("imm32\ImmGetDefaultIMEWnd", "Uint",hwnd)
+          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
           , "UInt", 0x0283  ;Message : WM_IME_CONTROL
-          ,  "Int", 0x0005  ;wParam  : IMC_GETOPENSTATUS
-          ,  "Int", 0)      ;lParam  : 0
+          , "Ptr", 0x0005  ;wParam  : IMC_GETOPENSTATUS
+          , "Ptr", 0)      ;lParam  : 0
 }
 
 ;-----------------------------------------------------------
@@ -100,18 +100,18 @@ IME_GET(WinTitle:="A")  {
 IME_SET(SetSts, WinTitle:="A")    {
     hwnd := WinExist(WinTitle)
     if  (WinActive(WinTitle))   {
-        ptrSize := !A_PtrSize ? 4 : A_PtrSize
+        ptrSize := A_PtrSize
         cbSize := 4+4+(PtrSize*6)+16
         stGTI := Buffer(cbSize,0)
         NumPut("Uint", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Uint",stGTI.Ptr)
+        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr,"Int")
                  ? NumGet(stGTI.Ptr,8+PtrSize,"Uint") : hwnd
     }
     return DllCall("SendMessage"
-          , "UInt", DllCall("imm32\ImmGetDefaultIMEWnd", "Uint",hwnd)
+          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
           , "UInt", 0x0283  ;Message : WM_IME_CONTROL
-          ,  "Int", 0x006   ;wParam  : IMC_SETOPENSTATUS
-          ,  "Int", SetSts) ;lParam  : 0 or 1
+          ,  "Ptr", 0x006   ;wParam  : IMC_SETOPENSTATUS
+          ,  "Ptr", SetSts) ;lParam  : 0 or 1
 }
 
 
@@ -166,18 +166,18 @@ IME_SET(SetSts, WinTitle:="A")    {
 IME_GetConvMode(WinTitle:="A")   {
     hwnd := WinExist(WinTitle)
     if  (WinActive(WinTitle))   {
-        ptrSize := !A_PtrSize ? 4 : A_PtrSize
+        ptrSize := A_PtrSize
         cbSize := 4+4+(PtrSize*6)+16	; DWORD*2+HWND*6+RECT
         stGTI := Buffer(cbSize,0)
         NumPut("UInt", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Uint",stGTI.Ptr)
+        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr,"Int")
                  ? NumGet(stGTI.Ptr,8+PtrSize,"Uint") : hwnd
     }
     return DllCall("SendMessage"
-          , "Uint", DllCall("imm32\ImmGetDefaultIMEWnd", "Uint",hwnd)
+          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
           , "Uint", 0x0283  ;Message : WM_IME_CONTROL
-          ,  "Int", 0x001   ;wParam  : IMC_GETCONVERSIONMODE
-          ,  "Int", 0)      ;lParam  : 0
+          , "Ptr", 0x001   ;wParam  : IMC_GETCONVERSIONMODE
+          , "Ptr", 0)      ;lParam  : 0
 }
 
 ;-------------------------------------------------------
@@ -189,18 +189,18 @@ IME_GetConvMode(WinTitle:="A")   {
 IME_SetConvMode(ConvMode,WinTitle:="A")   {
     hwnd := WinExist(WinTitle)
     if  (WinActive(WinTitle))   {
-        ptrSize := !A_PtrSize ? 4 : A_PtrSize
+        ptrSize := A_PtrSize
         cbSize := 4+4+(PtrSize*6)+16
         stGTI := Buffer(cbSize,0)
         NumPut("Uint", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr)
+        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr,"Int")
                  ? NumGet(stGTI.Ptr,8+PtrSize,"Uint") : hwnd
     }
     return DllCall("SendMessage"
-          , "UInt", DllCall("imm32\ImmGetDefaultIMEWnd", "Uint",hwnd)
+          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
           , "UInt", 0x0283      ;Message : WM_IME_CONTROL
-          ,  "Int", 0x002       ;wParam  : IMC_SETCONVERSIONMODE
-          ,  "Int", ConvMode)   ;lParam  : CONVERSIONMODE
+          , "Ptr", 0x002       ;wParam  : IMC_SETCONVERSIONMODE
+          , "Ptr", ConvMode)   ;lParam  : CONVERSIONMODE
 }
 
 
@@ -223,18 +223,18 @@ IME_SetConvMode(ConvMode,WinTitle:="A")   {
 IME_GetSentenceMode(WinTitle:="A")   {
     hwnd := WinExist(WinTitle)
     if  (WinActive(WinTitle))   {
-        ptrSize := !A_PtrSize ? 4 : A_PtrSize
+        ptrSize := A_PtrSize
         cbSize := 4+4+(PtrSize*6)+16
         stGTI := Buffer(cbSize,0)
         NumPut("Uint", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Uint", stGTI.Ptr)
+        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr", stGTI.Ptr,"Int")
                  ? NumGet(stGTI.Ptr,8+PtrSize,"UInt") : hwnd
     }
     return DllCall("SendMessage"
-          , "UInt", DllCall("imm32\ImmGetDefaultIMEWnd", "Uint",hwnd)
+          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
           , "UInt", 0x0283  ;Message : WM_IME_CONTROL
-          ,  "Int", 0x003   ;wParam  : IMC_GETSENTENCEMODE
-          ,  "Int", 0)      ;lParam  : 0
+          ,  "Ptr", 0x003   ;wParam  : IMC_GETSENTENCEMODE
+          ,  "Ptr", 0)      ;lParam  : 0
 }
 
 
@@ -250,19 +250,19 @@ IME_GetSentenceMode(WinTitle:="A")   {
 IME_SetSentenceMode(SentenceMode,WinTitle:="A")  {
     hwnd := WinExist(WinTitle)
     if  (WinActive(WinTitle))   {
-        ptrSize := !A_PtrSize ? 4 : A_PtrSize
+        ptrSize := A_PtrSize
         ;VarSetStrCapacity(stGTI, cbSize:=4+4+(PtrSize*6)+16)
         cbSize:=4+4+(PtrSize*6)+16
         stGTI := Buffer(cbSize,0)
-        NumPut("Uint", cbSize, stGTI.Ptr)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Uint", stGTI.Ptr)
+        NumPut("UInt", cbSize, stGTI.Ptr)   ;   DWORD   cbSize;
+        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr", stGTI.Ptr,"Int")
                  ? NumGet(stGTI.Ptr,8+PtrSize,"UInt") : hwnd
     }
     return DllCall("SendMessage"
-          , "UInt", DllCall("imm32\ImmGetDefaultIMEWnd", "Uint",hwnd)
+          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
           , "UInt", 0x0283          ;Message : WM_IME_CONTROL
-          ,  "Int", 0x004           ;wParam  : IMC_SETSENTENCEMODE
-          ,  "Int", SentenceMode)   ;lParam  : SentenceMode
+          , "Ptr", 0x004           ;wParam  : IMC_SETSENTENCEMODE
+          , "Ptr", SentenceMode)   ;lParam  : SentenceMode
 }
 
 
@@ -318,11 +318,11 @@ IME_GetConverting(WinTitle:="A",ConvCls:="",CandCls:="") {
 
     hwnd := WinExist(WinTitle)
     if  (WinActive(WinTitle))   {
-        ptrSize := !A_PtrSize ? 4 : A_PtrSize
+        ptrSize := A_PtrSize
         cbSize := 4+4+(PtrSize*6)+16
         stGTI := Buffer(cbSize,0)
         NumPut("Uint", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr)
+        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr,"Int")
                  ? NumGet(stGTI.Ptr,8+PtrSize,"UInt") : hwnd
     }
     ret := 0
@@ -331,47 +331,52 @@ IME_GetConverting(WinTitle:="A",ConvCls:="",CandCls:="") {
 	    pid := WinGetPID("ahk_id " . hwnd)	;WinGet, pid, PID,% "ahk_id " hwnd
     }
    	tmm := A_TitleMatchMode
-   	SetTitleMatchMode "RegEx"
-   	ret := WinExist("ahk_class " . CandCls . " ahk_pid " pid) ? 2
-        :  WinExist("ahk_class " . CandGCls                 ) ? 2
-        :  WinExist("ahk_class " . ConvCls . " ahk_pid " pid) ? 1
-        :  0
-    ;; 推測変換(atok)や予想入力(msime)中は候補窓が出ていないものとして取り扱う
-    if (2 == ret) {
-    	if (WinExist("ahk_class " . CandCls . " ahk_pid " pid))
-    	{
-	        ;; atok だと仮定して再度ウィンドウを検出する
-			WinGetPos(&X, &Y, &Width, &Height, "ahk_class " . CandCls . " ahk_pid " pid)
-		} else 
-		if (WinExist("ahk_class " . CandGCls                 ))
-		{
-	        ;; Google IME だと仮定して再度ウィンドウを検出する
-            WinGetPos(&X, &Y, &Width, &Height,"ahk_class " . CandGCls)
-		}
-        X1 := X
-        Y1 := Y
-        X2 := X + Width
-        Y2 := Y + Height
-
-        CoordMode "Pixel", "Screen"
-        ;; ATOK については 推測変換中か否かを確実に検出できる
-        ;; MS-IME は変換候補窓の表示中のみを検出できる
-        ;; Google IME も変換候補窓の表示中のみを検出できる
-        ;; そこで変換候補窓が表示されていないと仮定して処理を進めてみる
-        ret := 1
-        not_auto_cand_list := [0xFFE1C4  ; ATOK
-                             , 0xF6E8CB  ; MS-IME
-                             , 0xFFEAD1] ; Google IME
-        for index, ColorID in not_auto_cand_list {
-            elevel := PixelSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ColorID)
-            ;;  the color was not found
-            if (0 == elevel) {
-            	ret := 2
-            	break
+	try {
+	    SetTitleMatchMode "RegEx"
+		; 本体処理
+       	ret := WinExist("ahk_class " . CandCls . " ahk_pid " pid) ? 2
+            :  WinExist("ahk_class " . CandGCls                 ) ? 2
+            :  WinExist("ahk_class " . ConvCls . " ahk_pid " pid) ? 1
+            :  0
+        ;; 推測変換(atok)や予想入力(msime)中は候補窓が出ていないものとして取り扱う
+        if (2 == ret) {
+        	if (WinExist("ahk_class " . CandCls . " ahk_pid " pid))
+        	{
+    	        ;; atok だと仮定して再度ウィンドウを検出する
+    			WinGetPos(&X, &Y, &Width, &Height, "ahk_class " . CandCls . " ahk_pid " pid)
+    		} else 
+    		if (WinExist("ahk_class " . CandGCls                 ))
+    		{
+    	        ;; Google IME だと仮定して再度ウィンドウを検出する
+                WinGetPos(&X, &Y, &Width, &Height,"ahk_class " . CandGCls)
+    		}
+            X1 := X
+            Y1 := Y
+            X2 := X + Width
+            Y2 := Y + Height
+    
+            CoordMode "Pixel", "Screen"
+            ;; ATOK については 推測変換中か否かを確実に検出できる
+            ;; MS-IME は変換候補窓の表示中のみを検出できる
+            ;; Google IME も変換候補窓の表示中のみを検出できる
+            ;; そこで変換候補窓が表示されていないと仮定して処理を進めてみる
+            ret := 1
+            not_auto_cand_list := [0xFFE1C4  ; ATOK
+                                 , 0xF6E8CB  ; MS-IME
+                                 , 0xFFEAD1] ; Google IME
+            for index, ColorID in not_auto_cand_list {
+    			try {
+    			    PixelSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ColorID)
+    			    ret := 2
+    			    break
+    			} catch {
+    			}
             }
+            CoordMode "Pixel", "Window"
         }
-        CoordMode "Pixel", "Window"
-    }
+	} finally {
+	    SetTitleMatchMode tmm
+	}
 	SetTitleMatchMode tmm
     return ret
 }
@@ -381,21 +386,21 @@ IME_GetConverting(WinTitle:="A",ConvCls:="",CandCls:="") {
 Get_Keyboard_Layout(WinTitle:="A")  {
     hwnd := WinExist(WinTitle)
     if  (WinActive(WinTitle))   {
-        ptrSize := !A_PtrSize ? 4 : A_PtrSize
+        ptrSize := A_PtrSize
         cbSize := 4+4+(PtrSize*6)+16
         stGTI := Buffer(cbSize,0)
         NumPut("Uint", cbSize, stGTI.Ptr)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "UInt",0, "Ptr",stGTI)
-                 ? NumGet(stGTI,8+PtrSize,"UInt") : hwnd
+        if DllCall("GetGUIThreadInfo", "UInt",0, "Ptr",stGTI.Ptr, "Int")
+            hwnd := NumGet(stGTI,8+PtrSize,"Ptr")
     }
 
-    ThreadID := DllCall("GetWindowThreadProcessId", "UInt", hwnd, "UInt", 0 )
-    InputLocaleID := DllCall("GetKeyboardLayout", "UInt", ThreadID)
+    ThreadID := DllCall("GetWindowThreadProcessId", "Ptr", hwnd, "UInt*", 0, "UInt")
+    InputLocaleID := DllCall("GetKeyboardLayout", "UInt", ThreadID, "Ptr")
     return InputLocaleID
 }
 
 Get_languege_id(hKL) {
-    return Format("0x{:X}", mod(hKL, 0x10000))
+    return Mod(hKL, 0x10000)
 }
 
 
@@ -406,7 +411,6 @@ Get_primary_language_identifier(local_identifier){
 Get_sublanguage_identifier(local_identifier){
     return Format("0x{:X}", Floor(local_identifier / 0x100))
 }
-
 
 
 Get_languege_name() {
@@ -442,10 +446,10 @@ Get_languege_name() {
             ;; : (locale_id = "0x0423") ? "be"
             ;; : (locale_id = "0x0402") ? "bg"
             ;; : (locale_id = "0x0403") ? "ca"
-            : (locale_id = "0x804") ? "zh-cn"
-            : (locale_id = "0xC04") ? "zh-hk"
+            : (locale_id = "0x0804") ? "zh-cn"
+            : (locale_id = "0x0C04") ? "zh-hk"
             : (locale_id = "0x1004") ? "zh-sg"
-            : (locale_id = "0x404") ? "zh-tw"
+            : (locale_id = "0x0404") ? "zh-tw"
             ;; : (locale_id = "0x041A") ? "hr"
             ;; : (locale_id = "0x0405") ? "cs"
             ;; : (locale_id = "0x0406") ? "da"
@@ -484,7 +488,7 @@ Get_languege_name() {
             ;; : (locale_id = "0x0421") ? "in"
             ;; : (locale_id = "0x0410") ? "it"
             ;; : (locale_id = "0x0810") ? "it-ch"
-            : (locale_id = "0x411") ? "ja"
+            : (locale_id = "0x0411") ? "ja"
             ;; : (locale_id = "0x0412") ? "ko"
             ;; : (locale_id = "0x0426") ? "lv"
             ;; : (locale_id = "0x0427") ? "lt"
@@ -545,13 +549,13 @@ Get_ime_file(){
     ;; ImmGetIMEFileName 関数
     ;; http://msdn.microsoft.com/ja-jp/library/cc448001.aspx
     SubKey := Get_reg_Keyboard_Layouts()
-    ime_file_name := RegRead("HKEY_LOCAL_MACHINE" . SubKey, "Ime File")
+    ime_file_name := RegRead("HKEY_LOCAL_MACHINE\" . SubKey, "Ime File")
     return ime_file_name
 }
 
 Get_Layout_Text(){
     SubKey := Get_reg_Keyboard_Layouts()
-    layout_text := RegRead("HKEY_LOCAL_MACHINE" . SubKey, "Layout Text")
+    layout_text := RegRead("HKEY_LOCAL_MACHINE\" . SubKey, "Layout Text")
     return layout_text
 }
 
