@@ -1,54 +1,36 @@
 ﻿#Requires AutoHotkey v2.0
+#include .\IMEv2.ahk
 
-
-MsgBox("This script will run only on v2.0, keyboard language is " . Get_languege_name())
-	SetTimer(Interrupt16,16)
+MsgBox("This script will run only on v2.0, keyboard language is " . Get_language_name())
+	SetTimer(InterruptTimer,100)
 return
 
 
 ;=======================================================================
 ;	IME 状態のセット
-F1::
-{
-	vImeMode := IME_GET()
-	if vImeMode == 0
-		IME_SET(1)
-	else
-		IME_SET(0)
-	return
-}
+F1::IME_SET(!IME_GET())
 
 ;=======================================================================
 ;	IME 入力モードの設定
 F2::
 {
-	vImeConvMode := IME_GetConvMode()
-	if vImeConvMode == 9
-		IME_SetConvMode(11)
-	else
-	if vImeConvMode == 11
-		IME_SetConvMode(0)
-	else
-	if vImeConvMode == 0
-		IME_SetConvMode(3)
-	else
-	if vImeConvMode == 3
-		IME_SetConvMode(8)
-	else
-	if vImeConvMode == 8
-		IME_SetConvMode(9)
-		
+	mode := IME_GetConvMode()
+    nextMode := (mode == 9) ? 11 
+              : (mode == 11) ? 0 
+              : (mode == 0) ? 3 
+              : (mode == 3) ? 8 
+              : 9
+	IME_SetConvMode(nextMode)
 	return
 }
-#include .\IMEv2.ahk
 ;=======================================================================
 ;	タイマー割込み
-;	16ミリ秒ごとにIME関数を呼び出す
+;	所定時間ごとにIME関数を呼び出す
 ;-----------------------------------------------------------------------
 
-Interrupt16()
+InterruptTimer()
 {
-	global
+	global g_debugout
 	
 	vImeMode := IME_GET()
 	vImeConvMode := IME_GetConvMode()

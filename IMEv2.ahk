@@ -22,7 +22,7 @@
     Language:       Japanease
     Platform:       NT系
     Author:         v 1.1 eamat.      http://www6.atwiki.jp/eamat/
-    				v 2.0 Ken'ichiro Ayaki 
+    				v 2.0 Ken'ichiro Ayaki
 *****************************************************************************
 履歴
     2008.07.11 v1.0.47以降の 関数ライブラリスクリプト対応用にファイル名を変更
@@ -65,56 +65,58 @@
         アプリではバックグラウンドでも正しく値が取れるようになった。
         ※ブラウザ系でもアクティブ窓のみでの使用なら問題ないと思う、たぶん)
 
-    2023.07.09
+    2025.03.28
       実行環境を Autohotkey v2.0 とする。
       ファイル名を IMEv2.ahk に変更。
 */
+; ==============================================================================
+; 内部用：ターゲットとなるGUIスレッドのHWNDを取得する
+; ==============================================================================
+_IME_GetFocusHwnd(WinTitle := "A") {
+    hwnd := WinExist(WinTitle)
+    if WinActive(WinTitle) {
+        stGTI := Buffer(24 + (A_PtrSize * 6), 0)
+        NumPut("UInt", stGTI.Size, stGTI)
+        if DllCall("GetGUIThreadInfo", "UInt", 0, "Ptr", stGTI, "Int")
+            return NumGet(stGTI, 8 + A_PtrSize, "Ptr") || hwnd
+    }
+    return hwnd
+}
+; ==============================================================================
+; 内部用共通関数：フォーカスのあるHWNDを取得し、IMEへメッセージを送信する
+; ==============================================================================
+_IME_SendMessage(WinTitle, wParam, lParam := 0) {
+    hwnd := _IME_GetFocusHwnd(WinTitle)
+    if !hwnd
+    	return 0
+
+    imeWnd := DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr", hwnd, "Ptr")
+    if !imeWnd
+        return 0
+    
+    return DllCall("SendMessage"
+        , "Ptr", imeWnd
+        , "UInt", 0x0283    ; WM_IME_CONTROL
+        , "Ptr", wParam
+        , "Ptr", lParam)
+}
+
+; ==============================================================================
+; IME 制御関数群 (すべて1行で記述可能になります)
+; ==============================================================================
 ;-----------------------------------------------------------
 ; IMEの状態の取得
 ;   WinTitle="A"    対象Window
 ;   戻り値          1:ON / 0:OFF
 ;-----------------------------------------------------------
-IME_GET(WinTitle:="A")  {
-    hwnd := WinExist(WinTitle)
-    if  (WinActive(WinTitle))   {
-        ptrSize := A_PtrSize
-        cbSize := 4+4+(PtrSize*6)+16
-        stGTI := Buffer(cbSize,0)
-        NumPut("UInt", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr", stGTI.Ptr,"Int")
-                 ? NumGet(stGTI.Ptr,8+PtrSize,"Uint") : hwnd
-    }
-    return DllCall("SendMessage"
-          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
-          , "UInt", 0x0283  ;Message : WM_IME_CONTROL
-          , "Ptr", 0x0005  ;wParam  : IMC_GETOPENSTATUS
-          , "Ptr", 0)      ;lParam  : 0
-}
-
+IME_GET(WinTitle := "A")                     => _IME_SendMessage(WinTitle, 0x0005)
 ;-----------------------------------------------------------
 ; IMEの状態をセット
 ;   SetSts          1:ON / 0:OFF
 ;   WinTitle="A"    対象Window
 ;   戻り値          0:成功 / 0以外:失敗
 ;-----------------------------------------------------------
-IME_SET(SetSts, WinTitle:="A")    {
-    hwnd := WinExist(WinTitle)
-    if  (WinActive(WinTitle))   {
-        ptrSize := A_PtrSize
-        cbSize := 4+4+(PtrSize*6)+16
-        stGTI := Buffer(cbSize,0)
-        NumPut("Uint", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr,"Int")
-                 ? NumGet(stGTI.Ptr,8+PtrSize,"Uint") : hwnd
-    }
-    return DllCall("SendMessage"
-          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
-          , "UInt", 0x0283  ;Message : WM_IME_CONTROL
-          ,  "Ptr", 0x006   ;wParam  : IMC_SETOPENSTATUS
-          ,  "Ptr", SetSts) ;lParam  : 0 or 1
-}
-
-
+IME_SET(SetSts, WinTitle := "A")             => _IME_SendMessage(WinTitle, 0x0006, SetSts)
 ;===========================================================================
 ; IME 入力モード 取得 / セット
 ;
@@ -163,48 +165,14 @@ IME_SET(SetSts, WinTitle:="A")    {
 ;   WinTitle="A"    対象Window
 ;   戻り値          入力モード
 ;--------------------------------------------------------
-IME_GetConvMode(WinTitle:="A")   {
-    hwnd := WinExist(WinTitle)
-    if  (WinActive(WinTitle))   {
-        ptrSize := A_PtrSize
-        cbSize := 4+4+(PtrSize*6)+16	; DWORD*2+HWND*6+RECT
-        stGTI := Buffer(cbSize,0)
-        NumPut("UInt", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr,"Int")
-                 ? NumGet(stGTI.Ptr,8+PtrSize,"Uint") : hwnd
-    }
-    return DllCall("SendMessage"
-          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
-          , "Uint", 0x0283  ;Message : WM_IME_CONTROL
-          , "Ptr", 0x001   ;wParam  : IMC_GETCONVERSIONMODE
-          , "Ptr", 0)      ;lParam  : 0
-}
-
+IME_GetConvMode(WinTitle := "A")             => _IME_SendMessage(WinTitle, 0x0001)
 ;-------------------------------------------------------
 ; IME 入力モードセット
 ;   ConvMode        入力モード
 ;   WinTitle="A"    対象Window
 ;   戻り値          0:成功 / 0以外:失敗
 ;--------------------------------------------------------
-IME_SetConvMode(ConvMode,WinTitle:="A")   {
-    hwnd := WinExist(WinTitle)
-    if  (WinActive(WinTitle))   {
-        ptrSize := A_PtrSize
-        cbSize := 4+4+(PtrSize*6)+16
-        stGTI := Buffer(cbSize,0)
-        NumPut("Uint", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr,"Int")
-                 ? NumGet(stGTI.Ptr,8+PtrSize,"Uint") : hwnd
-    }
-    return DllCall("SendMessage"
-          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
-          , "UInt", 0x0283      ;Message : WM_IME_CONTROL
-          , "Ptr", 0x002       ;wParam  : IMC_SETCONVERSIONMODE
-          , "Ptr", ConvMode)   ;lParam  : CONVERSIONMODE
-}
-
-
-
+IME_SetConvMode(ConvMode, WinTitle := "A")   => _IME_SendMessage(WinTitle, 0x0002, ConvMode)
 ;===========================================================================
 ; IME 変換モード (ATOKはver.16で調査、バージョンで多少違うかも)
 
@@ -220,23 +188,7 @@ IME_SetConvMode(ConvMode,WinTitle:="A")   {
 ;          ATOK系  0:固定   1:複合語           4:自動 8:連文節
 ;          WXG4             1:複合語  2:無変換 4:自動 8:連文節
 ;------------------------------------------------------------------
-IME_GetSentenceMode(WinTitle:="A")   {
-    hwnd := WinExist(WinTitle)
-    if  (WinActive(WinTitle))   {
-        ptrSize := A_PtrSize
-        cbSize := 4+4+(PtrSize*6)+16
-        stGTI := Buffer(cbSize,0)
-        NumPut("Uint", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr", stGTI.Ptr,"Int")
-                 ? NumGet(stGTI.Ptr,8+PtrSize,"UInt") : hwnd
-    }
-    return DllCall("SendMessage"
-          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
-          , "UInt", 0x0283  ;Message : WM_IME_CONTROL
-          ,  "Ptr", 0x003   ;wParam  : IMC_GETSENTENCEMODE
-          ,  "Ptr", 0)      ;lParam  : 0
-}
-
+IME_GetSentenceMode(WinTitle := "A")         => _IME_SendMessage(WinTitle, 0x0003)
 
 ;----------------------------------------------------------------
 ; IME 変換モードセット
@@ -247,23 +199,7 @@ IME_GetSentenceMode(WinTitle:="A")   {
 ;   WinTitle="A"    対象Window
 ;   戻り値          0:成功 / 0以外:失敗
 ;-----------------------------------------------------------------
-IME_SetSentenceMode(SentenceMode,WinTitle:="A")  {
-    hwnd := WinExist(WinTitle)
-    if  (WinActive(WinTitle))   {
-        ptrSize := A_PtrSize
-        ;VarSetStrCapacity(stGTI, cbSize:=4+4+(PtrSize*6)+16)
-        cbSize:=4+4+(PtrSize*6)+16
-        stGTI := Buffer(cbSize,0)
-        NumPut("UInt", cbSize, stGTI.Ptr)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr", stGTI.Ptr,"Int")
-                 ? NumGet(stGTI.Ptr,8+PtrSize,"UInt") : hwnd
-    }
-    return DllCall("SendMessage"
-          , "Ptr", DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr",hwnd,"Ptr")
-          , "UInt", 0x0283          ;Message : WM_IME_CONTROL
-          , "Ptr", 0x004           ;wParam  : IMC_SETSENTENCEMODE
-          , "Ptr", SentenceMode)   ;lParam  : SentenceMode
-}
+IME_SetSentenceMode(SentenceMode, WinTitle:="A") => _IME_SendMessage(WinTitle, 0x0004, SentenceMode)
 
 
 ;;; software / AutoHotkey スレッド part8
@@ -278,7 +214,6 @@ IME_SetSentenceMode(SentenceMode,WinTitle:="A")  {
 
 ;---------------------------------------------------------------------------
 ;  IMEの種類を選ぶかもしれない関数
-
 ;==========================================================================
 ;  IME 文字入力の状態を返す
 ;  (パクリ元 : http://sites.google.com/site/agkh6mze/scripts#TOC-IME- )
@@ -297,109 +232,74 @@ IME_SetSentenceMode(SentenceMode,WinTitle:="A")  {
 ;      オプション-編集と日本語入力-編集中の文字列を文書に挿入モードで入力する
 ;      のチェックを外す
 ;==========================================================================
-IME_GetConverting(WinTitle:="A",ConvCls:="",CandCls:="") {
+IME_GetConverting(WinTitle := "A", ConvCls := "", CandCls := "") {
+	; 候補数が取れる＝変換候補窓
+	if IME_HasCandidateList(WinTitle)
+	    return 2
+    ; 1. 正規表現文字列を static で定義（関数呼び出し毎の文字列結合を回避し高速化）
+    static DefConv := "ATOK\d+CompStr|imejpstcnv\d+|WXGIMEConv|SKKIME\d+\.*\d+UCompStr|MSCTFIME Composition"
+    static DefCand := "ATOK\d+Cand|imejpstCandList\d+|imejpstcand\d+|mscandui\d+\.candidate|WXGIMECand|SKKIME\d+\.*\d+UCand"
+    static GoogleCand := "GoogleJapaneseInputCandidateWindow"
 
-    ;IME毎の 入力窓/候補窓Class一覧 ("|" 区切りで適当に足してけばOK)
-    ConvCls .= (ConvCls ? "|" : "")                 ;--- 入力窓 ---
-            .  "ATOK\d+CompStr"                     ; ATOK系
-            .  "|imejpstcnv\d+"                     ; MS-IME系
-            .  "|WXGIMEConv"                        ; WXG
-            .  "|SKKIME\d+\.*\d+UCompStr"           ; SKKIME Unicode
-            .  "|MSCTFIME Composition"              ; SKKIME for Windows Vista, Google日本語入力
+    ; 引数で追加指定されたクラスがあれば結合
+    RegConv := ConvCls ? ConvCls "|" DefConv : DefConv
+    RegCand := CandCls ? CandCls "|" DefCand : DefCand
 
-    CandCls .= (CandCls ? "|" : "")                 ;--- 候補窓 ---
-            .  "ATOK\d+Cand"                        ; ATOK系
-            .  "|imejpstCandList\d+|imejpstcand\d+" ; MS-IME 2002(8.1)XP付属
-            .  "|mscandui\d+\.candidate"            ; MS Office IME-200
-            .  "|WXGIMECand"                        ; WXG
-            .  "|SKKIME\d+\.*\d+UCand"              ; SKKIME Unicode
-            
-    CandGCls := "GoogleJapaneseInputCandidateWindow" ;Google日本語入力
+    hwnd := _IME_GetFocusHwnd(WinTitle)
+    if !hwnd
+        return 0
 
-    hwnd := WinExist(WinTitle)
-    if  (WinActive(WinTitle))   {
-        ptrSize := A_PtrSize
-        cbSize := 4+4+(PtrSize*6)+16
-        stGTI := Buffer(cbSize,0)
-        NumPut("Uint", cbSize, stGTI.Ptr,0)   ;   DWORD   cbSize;
-        hwnd := DllCall("GetGUIThreadInfo", "Uint",0, "Ptr",stGTI.Ptr,"Int")
-                 ? NumGet(stGTI.Ptr,8+PtrSize,"UInt") : hwnd
-    }
+    pid := WinGetPID("ahk_id " hwnd)
     ret := 0
-    pid := 0
-    if (hwnd) {
-	    pid := WinGetPID("ahk_id " . hwnd)	;WinGet, pid, PID,% "ahk_id " hwnd
-    }
-   	tmm := A_TitleMatchMode
-	try {
-	    SetTitleMatchMode "RegEx"
-		; 本体処理
-       	ret := WinExist("ahk_class " . CandCls . " ahk_pid " pid) ? 2
-            :  WinExist("ahk_class " . CandGCls                 ) ? 2
-            :  WinExist("ahk_class " . ConvCls . " ahk_pid " pid) ? 1
-            :  0
-        ;; 推測変換(atok)や予想入力(msime)中は候補窓が出ていないものとして取り扱う
-        if (2 == ret) {
-        	if (WinExist("ahk_class " . CandCls . " ahk_pid " pid))
-        	{
-    	        ;; atok だと仮定して再度ウィンドウを検出する
-    			WinGetPos(&X, &Y, &Width, &Height, "ahk_class " . CandCls . " ahk_pid " pid)
-    		} else 
-    		if (WinExist("ahk_class " . CandGCls                 ))
-    		{
-    	        ;; Google IME だと仮定して再度ウィンドウを検出する
-                WinGetPos(&X, &Y, &Width, &Height,"ahk_class " . CandGCls)
-    		}
-            X1 := X
-            Y1 := Y
-            X2 := X + Width
-            Y2 := Y + Height
-    
-            CoordMode "Pixel", "Screen"
-            ;; ATOK については 推測変換中か否かを確実に検出できる
-            ;; MS-IME は変換候補窓の表示中のみを検出できる
-            ;; Google IME も変換候補窓の表示中のみを検出できる
-            ;; そこで変換候補窓が表示されていないと仮定して処理を進めてみる
+
+    ; 環境の退避
+    oldTitleMode := A_TitleMatchMode
+    try {
+        SetTitleMatchMode("RegEx")
+        
+        ; 予測窓・変換窓の存在判定のみを行う（色判定は破棄）
+        if WinExist("ahk_class " RegCand " ahk_pid " pid) || WinExist("ahk_class " GoogleCand) {
+            ret := 2
+        } else if WinExist("ahk_class " RegConv " ahk_pid " pid) {
             ret := 1
-            not_auto_cand_list := [0xFFE1C4  ; ATOK
-                                 , 0xF6E8CB  ; MS-IME
-                                 , 0xFFEAD1] ; Google IME
-            for index, ColorID in not_auto_cand_list {
-    			try {
-    			    PixelSearch(&OutputVarX, &OutputVarY, X1, Y1, X2, Y2, ColorID)
-    			    ret := 2
-    			    break
-    			} catch {
-    			}
-            }
-            CoordMode "Pixel", "Window"
         }
-	} finally {
-	    SetTitleMatchMode tmm
-	}
-	SetTitleMatchMode tmm
+    } finally {
+        SetTitleMatchMode(oldTitleMode)
+    }
     return ret
+}
+;-----------------------------------------------------------
+;候補リスト件数をみる
+;-----------------------------------------------------------
+IME_HasCandidateList(WinTitle := "A") {
+	; 共通関数を使って1行でHWNDを取得
+    hwnd := _IME_GetFocusHwnd(WinTitle)
+    if !hwnd
+        return false
+
+    himc := DllCall("imm32\ImmGetContext", "Ptr", hwnd, "Ptr")
+    if !himc
+        return false
+
+    count := 0
+    ok := DllCall("imm32\ImmGetCandidateListCountW", "Ptr", himc, "UInt*", &count, "UInt")
+    DllCall("imm32\ImmReleaseContext", "Ptr", hwnd, "Ptr", himc)
+
+    return (ok != 0 && count > 0)
 }
 ;-----------------------------------------------------------
 ; 使用中のキーボード配列の取得
 ;-----------------------------------------------------------
 Get_Keyboard_Layout(WinTitle:="A")  {
-    hwnd := WinExist(WinTitle)
-    if  (WinActive(WinTitle))   {
-        ptrSize := A_PtrSize
-        cbSize := 4+4+(PtrSize*6)+16
-        stGTI := Buffer(cbSize,0)
-        NumPut("Uint", cbSize, stGTI.Ptr)   ;   DWORD   cbSize;
-        if DllCall("GetGUIThreadInfo", "UInt",0, "Ptr",stGTI.Ptr, "Int")
-            hwnd := NumGet(stGTI,8+PtrSize,"Ptr")
-    }
-
+    hwnd := _IME_GetFocusHwnd(WinTitle)
+    if !hwnd
+    	return 0
+    	
     ThreadID := DllCall("GetWindowThreadProcessId", "Ptr", hwnd, "UInt*", 0, "UInt")
-    InputLocaleID := DllCall("GetKeyboardLayout", "UInt", ThreadID, "Ptr")
-    return InputLocaleID
+    return DllCall("GetKeyboardLayout", "UInt", ThreadID, "Ptr")
 }
 
-Get_languege_id(hKL) {
+Get_language_id(hKL) {
     return Mod(hKL, 0x10000)
 }
 
@@ -413,8 +313,8 @@ Get_sublanguage_identifier(local_identifier){
 }
 
 
-Get_languege_name() {
-    locale_id := Get_languege_id(Get_Keyboard_Layout())
+Get_language_name() {
+    locale_id := Get_language_id(Get_Keyboard_Layout())
     ;; ロケール ID (LCID) の一覧
     ;; http://msdn.microsoft.com/ja-jp/library/ie/cc392381.aspx
     
@@ -423,143 +323,134 @@ Get_languege_name() {
     
     ;; [AHK 1.1.02.00 U32] Error: Expression too long
     ;; http://www.autohotkey.com/forum/topic75335.html
-
-    return    (locale_id = "0x436") ? "af"
-            ;; : (locale_id = "0x041C") ? "sq"
-            ;; : (locale_id = "0x3801") ? "ar-ae"
-            ;; : (locale_id = "0x3C01") ? "ar-bh"
-            ;; : (locale_id = "0x1401") ? "ar-dz"
-            ;; : (locale_id = "0x0C01") ? "ar-eg"
-            ;; : (locale_id = "0x0801") ? "ar-iq"
-            ;; : (locale_id = "0x2C01") ? "ar-jo"
-            ;; : (locale_id = "0x3401") ? "ar-kw"
-            ;; : (locale_id = "0x3001") ? "ar-lb"
-            ;; : (locale_id = "0x1001") ? "ar-ly"
-            ;; : (locale_id = "0x1801") ? "ar-ma"
-            ;; : (locale_id = "0x2001") ? "ar-om"
-            ;; : (locale_id = "0x4001") ? "ar-qa"
-            ;; : (locale_id = "0x0401") ? "ar-sa"
-            ;; : (locale_id = "0x2801") ? "ar-sy"
-            ;; : (locale_id = "0x1C01") ? "ar-tn"
-            ;; : (locale_id = "0x2401") ? "ar-ye"
-            ;; : (locale_id = "0x042D") ? "eu"
-            ;; : (locale_id = "0x0423") ? "be"
-            ;; : (locale_id = "0x0402") ? "bg"
-            ;; : (locale_id = "0x0403") ? "ca"
-            : (locale_id = "0x0804") ? "zh-cn"
-            : (locale_id = "0x0C04") ? "zh-hk"
-            : (locale_id = "0x1004") ? "zh-sg"
-            : (locale_id = "0x0404") ? "zh-tw"
-            ;; : (locale_id = "0x041A") ? "hr"
-            ;; : (locale_id = "0x0405") ? "cs"
-            ;; : (locale_id = "0x0406") ? "da"
-            ;; : (locale_id = "0x0413") ? "nl"
-            ;; : (locale_id = "0x0813") ? "nl-be"
-            ;; : (locale_id = "0x0C09") ? "en-au"
-            ;; : (locale_id = "0x2809") ? "en-bz"
-            ;; : (locale_id = "0x1009") ? "en-ca"
-            ;; : (locale_id = "0x1809") ? "en-ie"
-            ;; : (locale_id = "0x2009") ? "en-jm"
-            ;; : (locale_id = "0x1409") ? "en-nz"
-            ;; : (locale_id = "0x1C09") ? "en-za"
-            ;; : (locale_id = "0x2C09") ? "en-tt"
-            ;; : (locale_id = "0x0809") ? "en-gb"
-            ;; : (locale_id = "0x0409") ? "en-us"
-            ;; : (locale_id = "0x0425") ? "et"
-            ;; : (locale_id = "0x0429") ? "fa"
-            ;; : (locale_id = "0x040B") ? "fi"
-            ;; : (locale_id = "0x0438") ? "fo"
-            ;; : (locale_id = "0x040C") ? "fr"
-            ;; : (locale_id = "0x080C") ? "fr-be"
-            ;; : (locale_id = "0x0C0C") ? "fr-ca"
-            ;; : (locale_id = "0x140C") ? "fr-lu"
-            ;; : (locale_id = "0x100C") ? "fr-ch"
-            ;; : (locale_id = "0x043C") ? "gd"
-            ;; : (locale_id = "0x0407") ? "de"
-            ;; : (locale_id = "0x0C07") ? "de-at"
-            ;; : (locale_id = "0x1407") ? "de-li"
-            ;; : (locale_id = "0x1007") ? "de-lu"
-            ;; : (locale_id = "0x0807") ? "de-ch"
-            ;; : (locale_id = "0x0408") ? "el"
-            ;; : (locale_id = "0x040D") ? "he"
-            ;; : (locale_id = "0x0439") ? "hi"
-            ;; : (locale_id = "0x040E") ? "hu"
-            ;; : (locale_id = "0x040F") ? "is"
-            ;; : (locale_id = "0x0421") ? "in"
-            ;; : (locale_id = "0x0410") ? "it"
-            ;; : (locale_id = "0x0810") ? "it-ch"
-            : (locale_id = "0x0411") ? "ja"
-            ;; : (locale_id = "0x0412") ? "ko"
-            ;; : (locale_id = "0x0426") ? "lv"
-            ;; : (locale_id = "0x0427") ? "lt"
-            ;; : (locale_id = "0x042F") ? "mk"
-            ;; : (locale_id = "0x043E") ? "ms"
-            ;; : (locale_id = "0x043A") ? "mt"
-            ;; : (locale_id = "0x0414") ? "no"
-            ;; : (locale_id = "0x0415") ? "pl"
-            ;; : (locale_id = "0x0816") ? "pt"
-            ;; : (locale_id = "0x0416") ? "pt-br"
-            ;; : (locale_id = "0x0417") ? "rm"
-            ;; : (locale_id = "0x0418") ? "ro"
-            ;; : (locale_id = "0x0818") ? "ro-mo"
-            ;; : (locale_id = "0x0419") ? "ru"
-            ;; : (locale_id = "0x0819") ? "ru-mo"
-            ;; : (locale_id = "0x0C1A") ? "sr"
-            ;; : (locale_id = "0x0432") ? "tn"
-            ;; : (locale_id = "0x0424") ? "sl"
-            ;; : (locale_id = "0x041B") ? "sk"
-            ;; : (locale_id = "0x042E") ? "sb"
-            ;; : (locale_id = "0x040A") ? "es"
-            ;; : (locale_id = "0x2C0A") ? "es-ar"
-            ;; : (locale_id = "0x400A") ? "es-bo"
-            ;; : (locale_id = "0x340A") ? "es-cl"
-            ;; : (locale_id = "0x240A") ? "es-co"
-            ;; : (locale_id = "0x140A") ? "es-cr"
-            ;; : (locale_id = "0x1C0A") ? "es-do"
-            ;; : (locale_id = "0x300A") ? "es-ec"
-            ;; : (locale_id = "0x100A") ? "es-gt"
-            ;; : (locale_id = "0x480A") ? "es-hn"
-            ;; : (locale_id = "0x080A") ? "es-mx"
-            ;; : (locale_id = "0x4C0A") ? "es-ni"
-            ;; : (locale_id = "0x180A") ? "es-pa"
-            ;; : (locale_id = "0x280A") ? "es-pe"
-            ;; : (locale_id = "0x500A") ? "es-pr"
-            ;; : (locale_id = "0x3C0A") ? "es-py"
-            ;; : (locale_id = "0x440A") ? "es-sv"
-            ;; : (locale_id = "0x380A") ? "es-uy"
-            ;; : (locale_id = "0x200A") ? "es-ve"
-            ;; : (locale_id = "0x0430") ? "sx"
-            ;; : (locale_id = "0x041D") ? "sv"
-            ;; : (locale_id = "0x081D") ? "sv-fi"
-            ;; : (locale_id = "0x041E") ? "th"
-            ;; : (locale_id = "0x041F") ? "tr"
-            ;; : (locale_id = "0x0431") ? "ts"
-            ;; : (locale_id = "0x0422") ? "uk"
-            ;; : (locale_id = "0x0420") ? "ur"
-            ;; : (locale_id = "0x042A") ? "vi"
-            ;; : (locale_id = "0x0434") ? "xh"
-            ;; : (locale_id = "0x043D") ? "ji"
-            ;; : (locale_id = "0x0435") ? "zu"
-            : (locale_id = "-0xF3FC") ? "zh-yue" ; http://cpime.hk/ 広東語ピンインIME
-            : "unknown"
+    static LangMap := Map(
+    	"0x0436", "af",
+        "0x041C", "sq",
+        "0x3801", "ar-ae",
+        "0x3C01", "ar-bh",
+        "0x1401", "ar-dz",
+        "0x0C01", "ar-eg",
+        "0x0801", "ar-iq",
+        "0x2C01", "ar-jo",
+        "0x3401", "ar-kw",
+        "0x3001", "ar-lb",
+        "0x1001", "ar-ly",
+        "0x1801", "ar-ma",
+        "0x2001", "ar-om",
+        "0x4001", "ar-qa",
+        "0x0401", "ar-sa",
+        "0x2801", "ar-sy",
+        "0x1C01", "ar-tn",
+        "0x2401", "ar-ye",
+        "0x042D", "eu",
+        "0x0423", "be",
+        "0x0402", "bg",
+        "0x0403", "ca",
+        "0x0804", "zh-cn",
+        "0x0C04", "zh-hk",
+        "0x1004", "zh-sg",
+        "0x0404", "zh-tw",
+        "0x041A", "hr",
+        "0x0405", "cs",
+        "0x0406", "da",
+        "0x0413", "nl",
+        "0x0813", "nl-be",
+        "0x0C09", "en-au",
+        "0x2809", "en-bz",
+        "0x1009", "en-ca",
+        "0x1809", "en-ie",
+        "0x2009", "en-jm",
+        "0x1409", "en-nz",
+        "0x1C09", "en-za",
+        "0x2C09", "en-tt",
+        "0x0809", "en-gb",
+        "0x0409", "en-us",
+        "0x0425", "et",
+        "0x0429", "fa",
+        "0x040B", "fi",
+        "0x0438", "fo",
+        "0x040C", "fr",
+        "0x080C", "fr-be",
+        "0x0C0C", "fr-ca",
+        "0x140C", "fr-lu",
+        "0x100C", "fr-ch",
+        "0x043C", "gd",
+        "0x0407", "de",
+        "0x0C07", "de-at",
+        "0x1407", "de-li",
+        "0x1007", "de-lu",
+        "0x0807", "de-ch",
+        "0x0408", "el",
+        "0x040D", "he",
+        "0x0439", "hi",
+        "0x040E", "hu",
+        "0x040F", "is",
+        "0x0421", "in",
+        "0x0410", "it",
+        "0x0810", "it-ch",
+        "0x0411", "ja",
+        "0x0412", "ko",
+        "0x0426", "lv",
+        "0x0427", "lt",
+        "0x042F", "mk",
+        "0x043E", "ms",
+        "0x043A", "mt",
+        "0x0414", "no",
+        "0x0415", "pl",
+        "0x0816", "pt",
+        "0x0416", "pt-br",
+        "0x0417", "rm",
+        "0x0418", "ro",
+        "0x0818", "ro-mo",
+        "0x0419", "ru",
+        "0x0819", "ru-mo",
+        "0x0C1A", "sr",
+        "0x0432", "tn",
+        "0x0424", "sl",
+        "0x041B", "sk",
+        "0x042E", "sb",
+        "0x040A", "es",
+        "0x2C0A", "es-ar",
+        "0x400A", "es-bo",
+        "0x340A", "es-cl",
+        "0x240A", "es-co",
+        "0x140A", "es-cr",
+        "0x1C0A", "es-do",
+        "0x300A", "es-ec",
+        "0x100A", "es-gt",
+        "0x480A", "es-hn",
+        "0x080A", "es-mx",
+        "0x4C0A", "es-ni",
+        "0x180A", "es-pa",
+        "0x280A", "es-pe",
+        "0x500A", "es-pr",
+        "0x3C0A", "es-py",
+        "0x440A", "es-sv",
+        "0x380A", "es-uy",
+        "0x200A", "es-ve",
+        "0x0430", "sx",
+        "0x041D", "sv",
+        "0x081D", "sv-fi",
+        "0x041E", "th",
+        "0x041F", "tr",
+        "0x0431", "ts",
+        "0x0422", "uk",
+        "0x0420", "ur",
+        "0x042A", "vi",
+        "0x0434", "xh",
+        "0x043D", "ji",
+        "0x0435", "zu",
+        "0xF3FC", "zh-yue" ; http://cpime.hk/ 広東語ピンインIME
+    )
+    locale_id := Format("0x{:04X}", Get_language_id(Get_Keyboard_Layout()))
+    return LangMap.Has(locale_id) ? LangMap[locale_id] : "unknown"
 }
 
+Get_ime_file()  => RegRead("HKEY_LOCAL_MACHINE\" . Get_reg_Keyboard_Layouts(), "Ime File")
 
-Get_ime_file(){
-    ;; ImmGetIMEFileName 関数
-    ;; http://msdn.microsoft.com/ja-jp/library/cc448001.aspx
-    SubKey := Get_reg_Keyboard_Layouts()
-    ime_file_name := RegRead("HKEY_LOCAL_MACHINE\" . SubKey, "Ime File")
-    return ime_file_name
-}
+Get_Layout_Text() => RegRead("HKEY_LOCAL_MACHINE\" . Get_reg_Keyboard_Layouts(), "Layout Text")
 
-Get_Layout_Text(){
-    SubKey := Get_reg_Keyboard_Layouts()
-    layout_text := RegRead("HKEY_LOCAL_MACHINE\" . SubKey, "Layout Text")
-    return layout_text
-}
-
-Get_reg_Keyboard_Layouts(){
-    hKL := RegExReplace(Get_Keyboard_Layout(), "0x", "")
-    return "System\CurrentControlSet\control\keyboard layouts\" . hKL ;"
+Get_reg_Keyboard_Layouts() {
+    klid := Format("{:08X}", Get_Keyboard_Layout() & 0xFFFFFFFF)
+    return "SYSTEM\CurrentControlSet\Control\Keyboard Layouts\" . klid
 }
